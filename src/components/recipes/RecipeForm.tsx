@@ -407,15 +407,15 @@ export function RecipeForm({ isOpen, onClose, recipe, onSave }: RecipeFormProps)
                       value={newIngredient.food_item_id} 
                       onValueChange={(value) => setNewIngredient(prev => ({ 
                         ...prev, 
-                        food_item_id: value,
-                        ingredient_name: value ? '' : prev.ingredient_name 
+                        food_item_id: value === 'manual-entry' ? '' : value,
+                        ingredient_name: value === 'manual-entry' ? prev.ingredient_name : '' 
                       }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select food item" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None (manual entry)</SelectItem>
+                        <SelectItem value="manual-entry">None (manual entry)</SelectItem>
                         {foodItems.map(item => (
                           <SelectItem key={item.id} value={item.id}>
                             {item.name} {item.brand && `(${item.brand})`}
@@ -434,9 +434,9 @@ export function RecipeForm({ isOpen, onClose, recipe, onSave }: RecipeFormProps)
                       onChange={(e) => setNewIngredient(prev => ({ 
                         ...prev, 
                         ingredient_name: e.target.value,
-                        food_item_id: e.target.value ? '' : prev.food_item_id 
+                        food_item_id: e.target.value ? '' : prev.food_item_id === 'manual-entry' ? '' : prev.food_item_id 
                       }))}
-                      disabled={!!newIngredient.food_item_id}
+                      disabled={newIngredient.food_item_id && newIngredient.food_item_id !== 'manual-entry'}
                     />
                   </div>
                 </div>
@@ -482,7 +482,7 @@ export function RecipeForm({ isOpen, onClose, recipe, onSave }: RecipeFormProps)
                     <Button 
                       type="button" 
                       onClick={addIngredient}
-                      disabled={!newIngredient.food_item_id && !newIngredient.ingredient_name}
+                      disabled={(!newIngredient.food_item_id || newIngredient.food_item_id === 'manual-entry') && !newIngredient.ingredient_name}
                       className="w-full"
                     >
                       <Plus className="h-4 w-4" />
