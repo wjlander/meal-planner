@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { X, Plus, Trash2, Calculator } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -21,6 +22,24 @@ interface Recipe {
   meal_times?: string[];
   tags?: string[];
   image_url?: string;
+  ingredients?: RecipeIngredient[];
+}
+
+interface RecipeIngredient {
+  id?: string;
+  food_item_id?: string;
+  ingredient_name?: string;
+  quantity: number;
+  unit: string;
+  food_item?: {
+    id: string;
+    name: string;
+    brand?: string;
+    calories_per_100g?: number;
+    protein_per_100g?: number;
+    carbs_per_100g?: number;
+    fat_per_100g?: number;
+  };
 }
 
 interface RecipeFormProps {
@@ -51,6 +70,20 @@ export function RecipeForm({ isOpen, onClose, recipe, onSave }: RecipeFormProps)
   });
   const [newTag, setNewTag] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [foodItems, setFoodItems] = useState<any[]>([]);
+  const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
+  const [newIngredient, setNewIngredient] = useState({
+    food_item_id: '',
+    ingredient_name: '',
+    quantity: 0,
+    unit: 'g'
+  });
+  const [calculatedNutrition, setCalculatedNutrition] = useState({
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -60,6 +93,7 @@ export function RecipeForm({ isOpen, onClose, recipe, onSave }: RecipeFormProps)
         meal_times: recipe.meal_times || [],
         tags: recipe.tags || [],
       });
+      loadRecipeIngredients(recipe.id);
     } else {
       setFormData({
         name: '',
@@ -72,8 +106,67 @@ export function RecipeForm({ isOpen, onClose, recipe, onSave }: RecipeFormProps)
         tags: [],
         image_url: '',
       });
+      setIngredients([]);
     }
   }, [recipe]);
+
+  useEffect(() => {
+    loadFoodItems();
+  }, []);
+
+  useEffect(() => {
+    calculateNutrition();
+  }, [ingredients]);
+
+  const loadFoodItems = async () => {
+    const { data, error } = await supabase
+      .from('food_items')
+      .select('id, name, brand, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g')
+      .order('name');
+
+    if (error) {
+      console.error('Error loading food items:', error);
+      return;
+    }
+
+    setFoodItems(data || []);
+  };
+
+  const loadRecipeIngredients = async (recipeId?: string) => {
+    if (!recipeId) return;
+
+    const { data, error } = await supabase
+      .from('recipe_ingredients')
+      .select(`
+        *,
+        food_item:food_items(id, name, brand, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g)
+      `)
+      .eq('recipe_id', recipeId);
+
+    if (error) {
+      console.error('Error loading recipe ingredients:', error);
+      return;
+    }
+
+    setIngredients(data || []);
+  };
+
+  const calculateNutrition = () => {
+    const nutrition = ingredients.reduce((total, ingredient) => {
+      if (!ingredient.food_item) return total;
+
+      const multiplier = ingredient.quantity / 100; // Convert to per 100g basis
+      
+      return {
+        calories: total.calories + (ingredient.food_item.calories_per_100g || 0) * multiplier,
+        protein: total.protein + (ingredient.food_item.protein_per_100g || 0) * multiplier,
+        carbs: total.carbs + (ingredient.food_item.carbs_per_100g || 0) * multiplier,
+        fat: total.fat + (ingredient.food_item.fat_per_100g || 0) * multiplier,
+      };
+    }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+    setCalculatedNutrition(nutrition);
+  };
 
   const handleMealTimeToggle = (mealTime: string) => {
     setFormData(prev => ({
@@ -99,6 +192,32 @@ export function RecipeForm({ isOpen, onClose, recipe, onSave }: RecipeFormProps)
       ...prev,
       tags: prev.tags?.filter(tag => tag !== tagToRemove) || []
     }));
+  };
+
+  const addIngredient = () => {
+    if (newIngredient.food_item_id || newIngredient.ingredient_name) {
+      const selectedFoodItem = foodItems.find(item => item.id === newIngredient.food_item_id);
+      
+      const ingredient: RecipeIngredient = {
+        food_item_id: newIngredient.food_item_id || null,
+        ingredient_name: newIngredient.ingredient_name || selectedFoodItem?.name,
+        quantity: newIngredient.quantity,
+        unit: newIngredient.unit,
+        food_item: selectedFoodItem
+      };
+
+      setIngredients(prev => [...prev, ingredient]);
+      setNewIngredient({
+        food_item_id: '',
+        ingredient_name: '',
+        quantity: 0,
+        unit: 'g'
+      });
+    }
+  };
+
+  const removeIngredient = (index: number) => {
+    setIngredients(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -132,18 +251,53 @@ export function RecipeForm({ isOpen, onClose, recipe, onSave }: RecipeFormProps)
       };
 
       let error;
+      let savedRecipeId = recipe?.id;
+      
       if (recipe?.id) {
         ({ error } = await supabase
           .from('recipes')
           .update(recipeData)
           .eq('id', recipe.id));
       } else {
-        ({ error } = await supabase
+        const { data, error: insertError } = await supabase
           .from('recipes')
-          .insert(recipeData));
+          .insert(recipeData)
+          .select()
+          .single();
+        
+        error = insertError;
+        if (data) savedRecipeId = data.id;
       }
 
       if (error) throw error;
+
+      // Save ingredients
+      if (savedRecipeId && ingredients.length > 0) {
+        // Delete existing ingredients if editing
+        if (recipe?.id) {
+          await supabase
+            .from('recipe_ingredients')
+            .delete()
+            .eq('recipe_id', recipe.id);
+        }
+
+        // Insert new ingredients
+        const ingredientsData = ingredients.map(ingredient => ({
+          recipe_id: savedRecipeId,
+          food_item_id: ingredient.food_item_id,
+          ingredient_name: ingredient.ingredient_name,
+          quantity: ingredient.quantity,
+          unit: ingredient.unit
+        }));
+
+        const { error: ingredientsError } = await supabase
+          .from('recipe_ingredients')
+          .insert(ingredientsData);
+
+        if (ingredientsError) {
+          console.error('Error saving ingredients:', ingredientsError);
+        }
+      }
 
       toast({
         title: "Success",
@@ -238,6 +392,177 @@ export function RecipeForm({ isOpen, onClose, recipe, onSave }: RecipeFormProps)
                 onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
                 placeholder="https://example.com/image.jpg"
               />
+            </div>
+          </div>
+
+          <div>
+            <Label>Ingredients</Label>
+            <div className="space-y-4 mt-2">
+              {/* Add new ingredient */}
+              <div className="border rounded-lg p-4 bg-muted/30">
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <div>
+                    <Label htmlFor="food_item">From Food Database</Label>
+                    <Select 
+                      value={newIngredient.food_item_id} 
+                      onValueChange={(value) => setNewIngredient(prev => ({ 
+                        ...prev, 
+                        food_item_id: value,
+                        ingredient_name: value ? '' : prev.ingredient_name 
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select food item" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None (manual entry)</SelectItem>
+                        {foodItems.map(item => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.name} {item.brand && `(${item.brand})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="ingredient_name">Or Manual Entry</Label>
+                    <Input
+                      id="ingredient_name"
+                      placeholder="e.g., Salt, Pepper"
+                      value={newIngredient.ingredient_name}
+                      onChange={(e) => setNewIngredient(prev => ({ 
+                        ...prev, 
+                        ingredient_name: e.target.value,
+                        food_item_id: e.target.value ? '' : prev.food_item_id 
+                      }))}
+                      disabled={!!newIngredient.food_item_id}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label htmlFor="quantity">Quantity</Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      step="0.1"
+                      value={newIngredient.quantity}
+                      onChange={(e) => setNewIngredient(prev => ({ 
+                        ...prev, 
+                        quantity: parseFloat(e.target.value) || 0 
+                      }))}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="unit">Unit</Label>
+                    <Select 
+                      value={newIngredient.unit} 
+                      onValueChange={(value) => setNewIngredient(prev => ({ ...prev, unit: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="g">grams (g)</SelectItem>
+                        <SelectItem value="kg">kilograms (kg)</SelectItem>
+                        <SelectItem value="ml">milliliters (ml)</SelectItem>
+                        <SelectItem value="l">liters (l)</SelectItem>
+                        <SelectItem value="cup">cups</SelectItem>
+                        <SelectItem value="tbsp">tablespoons</SelectItem>
+                        <SelectItem value="tsp">teaspoons</SelectItem>
+                        <SelectItem value="piece">pieces</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex items-end">
+                    <Button 
+                      type="button" 
+                      onClick={addIngredient}
+                      disabled={!newIngredient.food_item_id && !newIngredient.ingredient_name}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ingredients list */}
+              {ingredients.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Recipe Ingredients</Label>
+                  {ingredients.map((ingredient, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium">
+                          {ingredient.food_item?.name || ingredient.ingredient_name}
+                          {ingredient.food_item?.brand && (
+                            <span className="text-sm text-muted-foreground ml-1">
+                              ({ingredient.food_item.brand})
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {ingredient.quantity} {ingredient.unit}
+                          {ingredient.food_item && (
+                            <span className="ml-2">
+                              • {((ingredient.food_item.calories_per_100g || 0) * ingredient.quantity / 100).toFixed(0)} cal
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeIngredient(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Calculated nutrition */}
+              {ingredients.some(i => i.food_item) && (
+                <div className="border rounded-lg p-4 bg-primary/5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calculator className="h-4 w-4 text-primary" />
+                    <Label>Calculated Nutrition (per serving)</Label>
+                  </div>
+                  <div className="grid grid-cols-4 gap-4 text-sm">
+                    <div className="text-center">
+                      <div className="font-semibold text-primary">
+                        {(calculatedNutrition.calories / (formData.servings || 1)).toFixed(0)}
+                      </div>
+                      <div className="text-muted-foreground">Calories</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-semibold text-primary">
+                        {(calculatedNutrition.protein / (formData.servings || 1)).toFixed(1)}g
+                      </div>
+                      <div className="text-muted-foreground">Protein</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-semibold text-primary">
+                        {(calculatedNutrition.carbs / (formData.servings || 1)).toFixed(1)}g
+                      </div>
+                      <div className="text-muted-foreground">Carbs</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-semibold text-primary">
+                        {(calculatedNutrition.fat / (formData.servings || 1)).toFixed(1)}g
+                      </div>
+                      <div className="text-muted-foreground">Fat</div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
