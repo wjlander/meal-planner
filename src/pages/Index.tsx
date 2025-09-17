@@ -9,16 +9,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Star, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Plus } from "lucide-react";
 import heroImage from "@/assets/hero-image.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
   
   const stats = {
-    totalMeals: 18,
-    weeklyPlans: 3,
-    activeRecipes: 42,
-    shoppingItems: 7,
+    totalMeals: 0,
+    weeklyPlans: 0,
+    activeRecipes: 0,
+    shoppingItems: 0,
   };
 
   return (
@@ -85,36 +86,28 @@ const Index = () => {
             {/* Recent Activity */}
             <Card>
               <CardContent className="p-6">
-                <h3 className="text-xl font-semibold mb-4">Recent Activity</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/30">
-                    <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center">
-                      <Star className="h-5 w-5 text-primary-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">Rated "Salmon & Vegetables" ⭐⭐⭐⭐⭐</p>
-                      <p className="text-sm text-muted-foreground">2 hours ago</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/30">
-                    <div className="h-10 w-10 rounded-full bg-gradient-secondary flex items-center justify-center">
-                      <Clock className="h-5 w-5 text-secondary-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">Added "Quick Chicken Curry" to recipes</p>
-                      <p className="text-sm text-muted-foreground">Yesterday</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/30">
-                    <div className="h-10 w-10 rounded-full bg-gradient-accent flex items-center justify-center">
-                      <Calendar className="h-5 w-5 text-accent-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">Completed weekly meal plan</p>
-                      <p className="text-sm text-muted-foreground">2 days ago</p>
-                    </div>
+                <h3 className="text-xl font-semibold mb-4">Getting Started</h3>
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h4 className="text-lg font-semibold mb-2">Welcome to UK Meal Planner!</h4>
+                  <p className="text-muted-foreground mb-4">
+                    Start your meal planning journey by creating your first recipe or meal plan
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                    <Button 
+                      onClick={() => navigate('/recipes')}
+                      variant="outline"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Recipe
+                    </Button>
+                    <Button 
+                      onClick={() => navigate('/planning')}
+                      className="bg-gradient-primary"
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Create Meal Plan
+                    </Button>
                   </div>
                 </div>
               </CardContent>

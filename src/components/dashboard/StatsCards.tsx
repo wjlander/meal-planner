@@ -21,7 +21,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{stats.totalMeals}</div>
           <p className="text-xs text-muted-foreground">
-            +12% from last week
+            No meals logged yet
           </p>
         </CardContent>
       </Card>
@@ -34,7 +34,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{stats.weeklyPlans}</div>
           <p className="text-xs text-muted-foreground">
-            2 plans this month
+            No plans created yet
           </p>
         </CardContent>
       </Card>
@@ -47,7 +47,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{stats.activeRecipes}</div>
           <p className="text-xs text-muted-foreground">
-            +5 new this week
+            No recipes saved yet
           </p>
         </CardContent>
       </Card>
@@ -60,7 +60,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{stats.shoppingItems}</div>
           <p className="text-xs text-muted-foreground">
-            3 items needed
+            No shopping items
           </p>
         </CardContent>
       </Card>
