@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Camera, Upload, X, Loader2, Search, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { OpenFoodFactsService } from "@/services/openFoodFacts";
+import { UKFoodDatabaseService } from "@/services/ukFoodDatabases";
 import { useAuth } from "@/hooks/useAuth";
 
 interface PhotoFoodSearchProps {
@@ -129,7 +129,7 @@ export function PhotoFoodSearch({ isOpen, onClose, onFoodItemFound }: PhotoFoodS
       setAnalysisProgress(25);
 
       // Call the Supabase edge function for AI analysis
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-food-photo`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-food-photo-google`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -200,23 +200,27 @@ export function PhotoFoodSearch({ isOpen, onClose, onFoodItemFound }: PhotoFoodS
   };
 
   const searchForIdentifiedFoods = async (searchTerms: string[]) => {
-    const allResults: any[] = [];
-
-    for (const term of searchTerms.slice(0, 3)) { // Limit to first 3 terms
-      try {
-        const results = await OpenFoodFactsService.searchByName(term, 1, 5);
-        allResults.push(...results);
-      } catch (error) {
-        console.error(`Error searching for ${term}:`, error);
+    try {
+      // Use the first search term for comprehensive database search
+      const primaryTerm = searchTerms[0] || 'food';
+      const results = await UKFoodDatabaseService.searchAllDatabases(primaryTerm);
+      
+      setSearchResults(results.slice(0, 15)); // Show more results from multiple databases
+      
+      if (results.length === 0) {
+        toast({
+          title: "No Results Found",
+          description: "No matching food items found in UK databases. Try a different photo or search manually.",
+        });
       }
+    } catch (error) {
+      console.error('Error searching food databases:', error);
+      toast({
+        title: "Search Error",
+        description: "Failed to search food databases. Please try again.",
+        variant: "destructive",
+      });
     }
-
-    // Remove duplicates based on barcode
-    const uniqueResults = allResults.filter((item, index, self) => 
-      index === self.findIndex(t => t.barcode === item.barcode)
-    );
-
-    setSearchResults(uniqueResults.slice(0, 10)); // Limit to 10 results
   };
 
   const addFoodItemToDatabase = async (foodItem: any) => {
@@ -229,7 +233,7 @@ export function PhotoFoodSearch({ isOpen, onClose, onFoodItemFound }: PhotoFoodS
       return;
     }
 
-    const success = await OpenFoodFactsService.addToDatabase(foodItem, user.id);
+    const success = await UKFoodDatabaseService.addToDatabase(foodItem, user.id);
     
     if (success) {
       toast({
@@ -426,9 +430,17 @@ export function PhotoFoodSearch({ isOpen, onClose, onFoodItemFound }: PhotoFoodS
                               {item.brand && (
                                 <p className="text-sm text-muted-foreground">{item.brand}</p>
                               )}
-                              <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {item.source === 'openfoodfacts' ? 'Open Food Facts' : 
+                                   item.source === 'fdc' ? 'USDA FDC' :
+                                   item.source === 'tesco' ? 'Tesco' : 'Unknown'}
+                                </Badge>
                                 <span>{item.calories_per_100g || 0} cal/100g</span>
                                 <span>{item.protein_per_100g || 0}g protein</span>
+                                {item.price && (
+                                  <span>£{item.price.toFixed(2)}</span>
+                                )}
                               </div>
                             </div>
                             <Button 

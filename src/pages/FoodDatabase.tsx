@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { BarcodeScanner } from "@/components/barcode/BarcodeScanner";
 import { PhotoFoodSearch } from "@/components/food/PhotoFoodSearch";
 import { useToast } from "@/hooks/use-toast";
-import { OpenFoodFactsService } from "@/services/openFoodFacts";
+import { UKFoodDatabaseService } from "@/services/ukFoodDatabases";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { 
@@ -126,16 +126,16 @@ export default function FoodDatabase() {
     // If not found, search Open Food Facts
     setIsSearching(true);
     try {
-      const foodItem = await OpenFoodFactsService.searchByBarcode(barcode);
+      const foodItem = await UKFoodDatabaseService.searchByBarcodeAllDatabases(barcode);
       
       if (foodItem) {
         // Add to our database
-        const success = await OpenFoodFactsService.addToDatabase(foodItem, user.id);
+        const success = await UKFoodDatabaseService.addToDatabase(foodItem, user.id);
         
         if (success) {
           toast({
             title: "Food Item Added",
-            description: `Added: ${foodItem.name}${foodItem.brand ? ` by ${foodItem.brand}` : ''} to database`,
+            description: `Added: ${foodItem.name}${foodItem.brand ? ` by ${foodItem.brand}` : ''} from ${foodItem.source}`,
           });
           loadFoodItems(); // Refresh the list
         } else {
@@ -148,7 +148,7 @@ export default function FoodDatabase() {
       } else {
         toast({
           title: "Item Not Found",
-          description: "This item is not in the Open Food Facts database. Would you like to add it manually?",
+          description: "This item is not in any UK food database. Would you like to add it manually?",
           variant: "destructive",
         });
       }
@@ -170,7 +170,7 @@ export default function FoodDatabase() {
     
     setIsSearching(true);
     try {
-      const results = await OpenFoodFactsService.searchByName(searchTerm);
+      const results = await UKFoodDatabaseService.searchAllDatabases(searchTerm);
       setSearchResults(results);
       
       if (results.length === 0) {
@@ -200,7 +200,7 @@ export default function FoodDatabase() {
       return;
     }
 
-    const success = await OpenFoodFactsService.addToDatabase(foodItem, user.id);
+    const success = await UKFoodDatabaseService.addToDatabase(foodItem, user.id);
     
     if (success) {
       toast({
@@ -239,6 +239,9 @@ export default function FoodDatabase() {
             <p className="text-muted-foreground">
               Scan barcodes or search for food items using Open Food Facts
             </p>
+            <Badge variant="outline" className="mt-2">
+              Now searching: Open Food Facts • USDA FDC • UK Supermarkets
+            </Badge>
           </div>
           <div className="flex gap-2">
             <Button 
@@ -273,7 +276,7 @@ export default function FoodDatabase() {
             <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search food items from Open Food Facts..."
+              placeholder="Search food items from UK databases..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -295,7 +298,7 @@ export default function FoodDatabase() {
           {searchResults.length > 0 && (
             <div className="mt-2 flex items-center gap-2">
               <Badge variant="outline">
-                {searchResults.length} results from Open Food Facts
+                {searchResults.length} results from UK food databases
               </Badge>
               <Button 
                 variant="ghost" 
@@ -338,6 +341,11 @@ export default function FoodDatabase() {
                     </div>
                     <div className="flex flex-col gap-1">
                       <Badge variant="outline">{getPrimaryCategory(item.categories)}</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        {item.source === 'openfoodfacts' ? 'Open Food Facts' : 
+                         item.source === 'fdc' ? 'USDA FDC' :
+                         item.source === 'tesco' ? 'Tesco' : 'Database'}
+                      </Badge>
                       {isSearchResult && (
                         <Badge variant="secondary" className="text-xs">
                           <Download className="h-3 w-3 mr-1" />
@@ -366,6 +374,12 @@ export default function FoodDatabase() {
                       <p className="font-medium">{item.fat_per_100g || 0}g</p>
                       <p className="text-xs text-muted-foreground">Fat</p>
                     </div>
+                    {item.price && (
+                      <div className="text-center p-2 bg-muted rounded">
+                        <p className="font-medium">£{item.price.toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">Price</p>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex gap-2">
@@ -399,7 +413,7 @@ export default function FoodDatabase() {
             <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No food items found</h3>
             <p className="text-muted-foreground mb-4">
-              {searchTerm ? "Try a different search term or scan a barcode" : "Scan a barcode or search to find food items"}
+              {searchTerm ? "Try a different search term or scan a barcode" : "Scan a barcode, search by photo, or search to find food items from UK databases"}
             </p>
             <Button onClick={() => setIsScannerOpen(true)} className="bg-gradient-primary">
               <Scan className="h-4 w-4 mr-2" />
@@ -411,9 +425,9 @@ export default function FoodDatabase() {
         {isSearching && (
           <div className="text-center py-12">
             <Loader2 className="h-12 w-12 text-primary mx-auto mb-4 animate-spin" />
-            <h3 className="text-lg font-semibold mb-2">Searching Open Food Facts</h3>
+            <h3 className="text-lg font-semibold mb-2">Searching UK Food Databases</h3>
             <p className="text-muted-foreground">
-              Looking for food items matching your search...
+              Searching Open Food Facts, USDA FDC, and UK supermarket databases...
             </p>
           </div>
         )}
