@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { BarcodeScanner } from "@/components/barcode/BarcodeScanner";
 import { PhotoFoodSearch } from "@/components/food/PhotoFoodSearch";
 import { useToast } from "@/hooks/use-toast";
@@ -74,9 +76,24 @@ export default function FoodDatabase() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isPhotoSearchOpen, setIsPhotoSearchOpen] = useState(false);
+  const [isManualDialogOpen, setIsManualDialogOpen] = useState(false);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<FoodItem[]>([]);
+  const [manualFormData, setManualFormData] = useState({
+    name: '',
+    brand: '',
+    barcode: '',
+    calories_per_100g: '',
+    protein_per_100g: '',
+    carbs_per_100g: '',
+    fat_per_100g: '',
+    fiber_per_100g: '',
+    sugar_per_100g: '',
+    sodium_per_100g: '',
+    serving_size: '',
+    serving_unit: 'g',
+  });
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -217,6 +234,83 @@ export default function FoodDatabase() {
     }
   };
 
+  const handleManualAdd = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to add food items",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!manualFormData.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Food name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('food_items')
+        .insert({
+          user_id: user.id,
+          name: manualFormData.name.trim(),
+          brand: manualFormData.brand.trim() || null,
+          barcode: manualFormData.barcode.trim() || null,
+          calories_per_100g: parseFloat(manualFormData.calories_per_100g) || null,
+          protein_per_100g: parseFloat(manualFormData.protein_per_100g) || null,
+          carbs_per_100g: parseFloat(manualFormData.carbs_per_100g) || null,
+          fat_per_100g: parseFloat(manualFormData.fat_per_100g) || null,
+          fiber_per_100g: parseFloat(manualFormData.fiber_per_100g) || null,
+          sugar_per_100g: parseFloat(manualFormData.sugar_per_100g) || null,
+          sodium_per_100g: parseFloat(manualFormData.sodium_per_100g) || null,
+          serving_size: parseFloat(manualFormData.serving_size) || null,
+          serving_unit: manualFormData.serving_unit,
+          is_public: false,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: `Added ${manualFormData.name} to your food database`,
+      });
+
+      setIsManualDialogOpen(false);
+      resetManualForm();
+      loadFoodItems();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add food item",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const resetManualForm = () => {
+    setManualFormData({
+      name: '',
+      brand: '',
+      barcode: '',
+      calories_per_100g: '',
+      protein_per_100g: '',
+      carbs_per_100g: '',
+      fat_per_100g: '',
+      fiber_per_100g: '',
+      sugar_per_100g: '',
+      sodium_per_100g: '',
+      serving_size: '',
+      serving_unit: 'g',
+    });
+  };
+
   const filteredItems = foodItems.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -264,7 +358,10 @@ export default function FoodDatabase() {
               <Camera className="h-4 w-4 mr-2" />
               Search by Photo
             </Button>
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              onClick={() => setIsManualDialogOpen(true)}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Manual
             </Button>
@@ -449,6 +546,165 @@ export default function FoodDatabase() {
             loadFoodItems();
           }}
         />
+
+        <Dialog open={isManualDialogOpen} onOpenChange={setIsManualDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Add Food Item Manually</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="manual_name">Food Name *</Label>
+                  <Input
+                    id="manual_name"
+                    placeholder="e.g., Organic Bananas"
+                    value={manualFormData.name}
+                    onChange={(e) => setManualFormData(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="manual_brand">Brand</Label>
+                  <Input
+                    id="manual_brand"
+                    placeholder="e.g., Tesco"
+                    value={manualFormData.brand}
+                    onChange={(e) => setManualFormData(prev => ({ ...prev, brand: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="manual_barcode">Barcode (Optional)</Label>
+                <Input
+                  id="manual_barcode"
+                  placeholder="1234567890123"
+                  value={manualFormData.barcode}
+                  onChange={(e) => setManualFormData(prev => ({ ...prev, barcode: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Nutrition per 100g</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="manual_calories">Calories</Label>
+                    <Input
+                      id="manual_calories"
+                      type="number"
+                      step="0.1"
+                      placeholder="0"
+                      value={manualFormData.calories_per_100g}
+                      onChange={(e) => setManualFormData(prev => ({ ...prev, calories_per_100g: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="manual_protein">Protein (g)</Label>
+                    <Input
+                      id="manual_protein"
+                      type="number"
+                      step="0.1"
+                      placeholder="0"
+                      value={manualFormData.protein_per_100g}
+                      onChange={(e) => setManualFormData(prev => ({ ...prev, protein_per_100g: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="manual_carbs">Carbs (g)</Label>
+                    <Input
+                      id="manual_carbs"
+                      type="number"
+                      step="0.1"
+                      placeholder="0"
+                      value={manualFormData.carbs_per_100g}
+                      onChange={(e) => setManualFormData(prev => ({ ...prev, carbs_per_100g: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="manual_fat">Fat (g)</Label>
+                    <Input
+                      id="manual_fat"
+                      type="number"
+                      step="0.1"
+                      placeholder="0"
+                      value={manualFormData.fat_per_100g}
+                      onChange={(e) => setManualFormData(prev => ({ ...prev, fat_per_100g: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="manual_fiber">Fiber (g)</Label>
+                    <Input
+                      id="manual_fiber"
+                      type="number"
+                      step="0.1"
+                      placeholder="0"
+                      value={manualFormData.fiber_per_100g}
+                      onChange={(e) => setManualFormData(prev => ({ ...prev, fiber_per_100g: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="manual_sugar">Sugar (g)</Label>
+                    <Input
+                      id="manual_sugar"
+                      type="number"
+                      step="0.1"
+                      placeholder="0"
+                      value={manualFormData.sugar_per_100g}
+                      onChange={(e) => setManualFormData(prev => ({ ...prev, sugar_per_100g: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="manual_sodium">Sodium (mg)</Label>
+                    <Input
+                      id="manual_sodium"
+                      type="number"
+                      step="0.1"
+                      placeholder="0"
+                      value={manualFormData.sodium_per_100g}
+                      onChange={(e) => setManualFormData(prev => ({ ...prev, sodium_per_100g: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="manual_serving_size">Serving Size</Label>
+                  <Input
+                    id="manual_serving_size"
+                    type="number"
+                    step="0.1"
+                    placeholder="100"
+                    value={manualFormData.serving_size}
+                    onChange={(e) => setManualFormData(prev => ({ ...prev, serving_size: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="manual_serving_unit">Unit</Label>
+                  <Input
+                    id="manual_serving_unit"
+                    placeholder="g"
+                    value={manualFormData.serving_unit}
+                    onChange={(e) => setManualFormData(prev => ({ ...prev, serving_unit: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsManualDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleManualAdd}>
+                  Add Food Item
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
