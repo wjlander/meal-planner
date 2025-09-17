@@ -144,6 +144,25 @@ export function PhotoFoodSearch({ isOpen, onClose, onFoodItemFound }: PhotoFoodS
       setAnalysisProgress(50);
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        
+        if (response.status === 429) {
+          toast({
+            title: "AI Service Temporarily Unavailable",
+            description: "The AI analysis service has reached its quota limit. Using fallback search terms.",
+            variant: "destructive",
+          });
+          
+          // Use fallback analysis if provided
+          if (errorData.analysis) {
+            setAnalysisResult(errorData.analysis);
+            setAnalysisProgress(75);
+            await searchForIdentifiedFoods(errorData.analysis.searchTerms);
+            setAnalysisProgress(100);
+            return;
+          }
+        }
+        
         throw new Error(`Analysis failed: ${response.status}`);
       }
 

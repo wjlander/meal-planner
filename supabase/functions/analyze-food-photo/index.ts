@@ -79,6 +79,22 @@ serve(async (req) => {
     console.log("OpenAI response:", data);
 
     if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ 
+          success: false,
+          error: "AI service temporarily unavailable due to quota limits. Please try again later.",
+          analysis: {
+            identifiedFoods: ["Food items detected"],
+            confidence: "low",
+            searchTerms: ["food", "snack", "meal"],
+            notes: "AI analysis unavailable, using fallback search terms"
+          }
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 429,
+        });
+      }
+      
       throw new Error(`OpenAI API error: ${response.status} - ${data.error?.message || 'Unknown error'}`);
     }
 
