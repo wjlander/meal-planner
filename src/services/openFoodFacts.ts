@@ -37,6 +37,8 @@ interface FoodItem {
   categories?: string[];
 }
 
+import { supabase } from "@/integrations/supabase/client";
+
 export class OpenFoodFactsService {
   private static readonly BASE_URL = 'https://world.openfoodfacts.org/api/v2';
   
