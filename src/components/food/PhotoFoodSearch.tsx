@@ -39,6 +39,14 @@ export function PhotoFoodSearch({ isOpen, onClose, onFoodItemFound }: PhotoFoodS
 
   const startCamera = async () => {
     try {
+      // Request camera permission explicitly
+      if ('permissions' in navigator) {
+        const permission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        if (permission.state === 'denied') {
+          throw new Error('Camera permission denied');
+        }
+      }
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: { ideal: "environment" },
@@ -57,7 +65,7 @@ export function PhotoFoodSearch({ isOpen, onClose, onFoodItemFound }: PhotoFoodS
     } catch (error) {
       toast({
         title: "Camera Access Required",
-        description: "Please allow camera access to take photos.",
+        description: "Please allow camera access to take photos. You may need to enable camera permissions in your device settings.",
         variant: "destructive",
       });
     }

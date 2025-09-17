@@ -304,9 +304,49 @@ cd android
 1. Check `android/app/src/main/AndroidManifest.xml` has required permissions:
    ```xml
    <uses-permission android:name="android.permission.CAMERA" />
-   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+   <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+   
+   <!-- Camera features -->
+   <uses-feature android:name="android.hardware.camera" android:required="false" />
+   <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
    ```
+
+2. **Manual Permission Setup (if needed):**
+   
+   If permissions still don't work, manually add them to `android/app/src/main/AndroidManifest.xml`:
+   
+   ```xml
+   <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+   
+       <!-- Camera permissions -->
+       <uses-permission android:name="android.permission.CAMERA" />
+       <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+       <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+       <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+       
+       <!-- Camera features -->
+       <uses-feature android:name="android.hardware.camera" android:required="false" />
+       <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+   
+       <application>
+           <!-- Your app content -->
+       </application>
+   </manifest>
+   ```
+
+3. **Test Camera Access:**
+   ```bash
+   # After building and installing the APK
+   # Open the app and try to use camera features
+   # The app should now prompt for camera permissions
+   ```
+
+4. **If permissions are still not requested:**
+   - Uninstall the app completely from the device
+   - Rebuild and reinstall the APK
+   - Android caches permission decisions, so a fresh install is needed
 
 ## 📤 Step 8: Distribution Options
 

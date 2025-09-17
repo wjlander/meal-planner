@@ -5,11 +5,15 @@
   "bundledWebRuntime": false,
   "plugins": {
     "Camera": {
-      "permissions": ["camera"]
+      "permissions": ["camera", "photos"]
     },
     "LocalNotifications": {
       "smallIcon": "ic_stat_icon_config_sample",
       "iconColor": "#488AFF"
+    },
+    "Permissions": {
+      "camera": "This app needs camera access to scan barcodes and take photos of food items.",
+      "photos": "This app needs photo access to analyze food images."
     }
   }
 }

@@ -29,6 +29,14 @@ export function BarcodeScanner({ isOpen, onClose, onBarcodeScanned }: BarcodeSca
 
   const startCamera = async () => {
     try {
+      // Request camera permission explicitly
+      if ('permissions' in navigator) {
+        const permission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        if (permission.state === 'denied') {
+          throw new Error('Camera permission denied');
+        }
+      }
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: { ideal: "environment" }, // Use back camera
@@ -52,7 +60,7 @@ export function BarcodeScanner({ isOpen, onClose, onBarcodeScanned }: BarcodeSca
       setHasPermission(false);
       toast({
         title: "Camera Access Required",
-        description: "Please allow camera access to scan barcodes.",
+        description: "Please allow camera access to scan barcodes. You may need to enable camera permissions in your device settings.",
         variant: "destructive",
       });
     }
