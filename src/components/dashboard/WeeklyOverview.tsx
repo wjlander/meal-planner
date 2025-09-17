@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Users, Star } from "lucide-react";
+import { Clock, Users, Star, Calendar, Plus } from "lucide-react";
 import { Rating } from "@/components/ui/rating";
 import { MealRatingDialog } from "@/components/meals/MealRatingDialog";
 import { useState } from "react";
