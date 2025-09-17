@@ -108,6 +108,14 @@ npm install -g @capacitor/cli
 npm run build
 ```
 
+### 3.5 Verify Build Output
+```bash
+# Check that the dist folder contains the built files
+ls -la dist/
+
+# You should see index.html and assets folder
+```
+
 ## 📱 Step 4: Setup Capacitor for Android
 
 ### 4.1 Initialize Capacitor (if not already done)
@@ -125,6 +133,11 @@ npx cap add android
 ```bash
 npx cap sync android
 ```
+
+This command will:
+- Copy the built web files from `dist/` to the Android project
+- Update native dependencies
+- Configure the Android project to use local files instead of remote URLs
 
 ## 🔨 Step 5: Configure Android Project
 
@@ -169,6 +182,10 @@ This will open the Android project in Android Studio.
 ### 6.1 Debug Build (for testing)
 ```bash
 # In the project root directory
+# First ensure you have the latest build
+npm run build
+
+# Copy and sync the built files to Android
 npx cap copy android
 npx cap sync android
 
@@ -193,6 +210,10 @@ In Android Studio:
 
 #### Method 2: Using Command Line
 ```bash
+# Ensure latest build is available
+npm run build
+npx cap sync android
+
 # First, create gradle.properties file
 cd android
 echo "android.useAndroidX=true" > gradle.properties
@@ -266,9 +287,16 @@ cd android
 ### Issue: App crashes on startup
 **Solution:**
 1. Check Android Studio logcat for errors
-2. Ensure all Capacitor plugins are properly synced:
+2. Ensure you have the latest build and sync:
    ```bash
+   npm run build
    npx cap sync android
+   ```
+3. Verify the webDir is correctly set in capacitor.config.json:
+   ```json
+   {
+     "webDir": "dist"
+   }
    ```
 
 ### Issue: Camera/permissions not working
@@ -313,8 +341,9 @@ cd android
 After following these steps, you should have:
 1. ✅ Android Studio properly configured
 2. ✅ Project set up with Capacitor
-3. ✅ Signed APK file ready for distribution
-4. ✅ App tested on Android device
+3. ✅ Web app built and synced to Android project
+4. ✅ Signed APK file ready for distribution
+5. ✅ App tested on Android device
 
 **Final APK location**: `android/app/build/outputs/apk/release/app-release.apk`
 
@@ -324,8 +353,9 @@ If you encounter issues:
 1. Check [Capacitor Android Documentation](https://capacitorjs.com/docs/android)
 2. Review [Android Developer Guides](https://developer.android.com/guide)
 3. Check project's GitHub issues or discussions
-4. Ensure all dependencies are up to date:
+4. Ensure build and sync are up to date:
    ```bash
+   npm run build
    npm update
    npx cap sync android
    ```
