@@ -110,7 +110,7 @@ export default function FoodDatabase() {
       .from('food_items')
       .select('*')
       .eq('barcode', barcode)
-      .single();
+      .maybeSingle();
 
     if (existingItem) {
       toast({
