@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { BarcodeScanner } from "@/components/barcode/BarcodeScanner";
+import { PhotoFoodSearch } from "@/components/food/PhotoFoodSearch";
 import { useToast } from "@/hooks/use-toast";
 import { OpenFoodFactsService } from "@/services/openFoodFacts";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +16,7 @@ import {
   Package, 
   Plus, 
   Search,
+  Camera,
   Apple,
   Wheat,
   Beef,
@@ -71,6 +73,7 @@ const getCategoryColor = (categories?: string[]) => {
 export default function FoodDatabase() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isPhotoSearchOpen, setIsPhotoSearchOpen] = useState(false);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<FoodItem[]>([]);
@@ -250,6 +253,14 @@ export default function FoodDatabase() {
               )}
               {isSearching ? "Searching..." : "Scan Barcode"}
             </Button>
+            <Button 
+              onClick={() => setIsPhotoSearchOpen(true)}
+              variant="outline"
+              disabled={isSearching}
+            >
+              <Camera className="h-4 w-4 mr-2" />
+              Search by Photo
+            </Button>
             <Button variant="outline">
               <Plus className="h-4 w-4 mr-2" />
               Add Manual
@@ -411,6 +422,18 @@ export default function FoodDatabase() {
           isOpen={isScannerOpen}
           onClose={() => setIsScannerOpen(false)}
           onBarcodeScanned={handleBarcodeScanned}
+        />
+
+        <PhotoFoodSearch
+          isOpen={isPhotoSearchOpen}
+          onClose={() => setIsPhotoSearchOpen(false)}
+          onFoodItemFound={(foodItem) => {
+            toast({
+              title: "Food Item Found",
+              description: `Found: ${foodItem.name}`,
+            });
+            loadFoodItems();
+          }}
         />
       </main>
     </div>
