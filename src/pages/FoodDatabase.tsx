@@ -334,7 +334,7 @@ export default function FoodDatabase() {
               Scan barcodes or search for food items using Open Food Facts
             </p>
             <Badge variant="outline" className="mt-2">
-              Now searching: Open Food Facts • USDA FDC • UK Supermarkets
+              Now searching: Open Food Facts • USDA FDC • Tesco • Sainsbury's
             </Badge>
           </div>
           <div className="flex gap-2">
@@ -441,7 +441,8 @@ export default function FoodDatabase() {
                       <Badge variant="secondary" className="text-xs">
                         {item.source === 'openfoodfacts' ? 'Open Food Facts' : 
                          item.source === 'fdc' ? 'USDA FDC' :
-                         item.source === 'tesco' ? 'Tesco' : 'Database'}
+                         item.source === 'tesco' ? 'Tesco' :
+                         item.source === 'sainsburys' ? 'Sainsbury\'s' : 'Database'}
                       </Badge>
                       {isSearchResult && (
                         <Badge variant="secondary" className="text-xs">
