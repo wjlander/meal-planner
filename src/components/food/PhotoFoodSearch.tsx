@@ -31,6 +31,7 @@ export function PhotoFoodSearch({ isOpen, onClose, onFoodItemFound }: PhotoFoodS
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isUsingCamera, setIsUsingCamera] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [photoDescription, setPhotoDescription] = useState("");
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -119,42 +120,56 @@ export function PhotoFoodSearch({ isOpen, onClose, onFoodItemFound }: PhotoFoodS
   const analyzePhoto = async (imageDataUrl: string) => {
     setIsAnalyzing(true);
     setAnalysisProgress(0);
+    setAnalysisResult(null);
+    setSearchResults([]);
 
     try {
-      // Simulate AI analysis progress
-      const progressInterval = setInterval(() => {
-        setAnalysisProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 200);
+      setAnalysisProgress(25);
 
-      // For demo purposes, simulate food recognition
-      // In a real implementation, this would call an AI service like Google Vision API or OpenAI
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      clearInterval(progressInterval);
-      setAnalysisProgress(100);
+      // Call the Supabase edge function for AI analysis
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-food-photo`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          imageUrl: imageDataUrl,
+          description: photoDescription
+        }),
+      });
 
-      // Mock analysis result based on common food items
-      const mockAnalysis: AnalysisResult = {
-        identifiedFoods: ["oats", "cereal", "breakfast", "grains"],
-        confidence: "medium",
-        suggestions: ["oats", "porridge", "cereal", "muesli", "granola"]
+      setAnalysisProgress(50);
+
+      if (!response.ok) {
+        throw new Error(`Analysis failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setAnalysisProgress(75);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Analysis failed');
+      }
+
+      const analysis: AnalysisResult = {
+        identifiedFoods: result.analysis.identifiedFoods || [],
+        confidence: result.analysis.confidence || 'low',
+        suggestions: result.analysis.searchTerms || []
       };
 
-      setAnalysisResult(mockAnalysis);
+      setAnalysisResult(analysis);
+      setAnalysisProgress(90);
 
-      // Search for food items based on identified foods
-      await searchForIdentifiedFoods(mockAnalysis.suggestions);
+      // Search for food items based on AI suggestions
+      await searchForIdentifiedFoods(analysis.suggestions);
+      setAnalysisProgress(100);
 
     } catch (error) {
+      console.error('Photo analysis error:', error);
       toast({
         title: "Error",
-        description: "Failed to analyze photo",
+        description: `Failed to analyze photo: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -215,6 +230,7 @@ export function PhotoFoodSearch({ isOpen, onClose, onFoodItemFound }: PhotoFoodS
     setSelectedImage(null);
     setAnalysisResult(null);
     setSearchResults([]);
+    setPhotoDescription("");
     onClose();
   };
 
@@ -231,6 +247,16 @@ export function PhotoFoodSearch({ isOpen, onClose, onFoodItemFound }: PhotoFoodS
         <div className="space-y-4">
           {!selectedImage && !isUsingCamera && (
             <div className="space-y-4">
+              <div>
+                <Label htmlFor="description">Description (Optional)</Label>
+                <Input
+                  id="description"
+                  placeholder="Describe what food you're looking for..."
+                  value={photoDescription}
+                  onChange={(e) => setPhotoDescription(e.target.value)}
+                />
+              </div>
+              
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-4">
                   Take a photo or upload an image of food to search for matching items
@@ -326,16 +352,16 @@ export function PhotoFoodSearch({ isOpen, onClose, onFoodItemFound }: PhotoFoodS
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Search className="h-5 w-5" />
+                      <Search className="h-5 w-5 text-primary" />
                       Analysis Results
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div>
-                      <span className="font-medium">Identified: </span>
+                      <span className="font-medium">AI Identified: </span>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {analysisResult.identifiedFoods.map((food, index) => (
-                          <Badge key={index} variant="outline">
+                          <Badge key={index} variant="default" className="bg-primary/10 text-primary">
                             {food}
                           </Badge>
                         ))}
@@ -350,6 +376,10 @@ export function PhotoFoodSearch({ isOpen, onClose, onFoodItemFound }: PhotoFoodS
                       }>
                         {analysisResult.confidence}
                       </Badge>
+                    </div>
+                    
+                    <div className="text-sm text-muted-foreground">
+                      Searching Open Food Facts for matching products...
                     </div>
                   </CardContent>
                 </Card>
